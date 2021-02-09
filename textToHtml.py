@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 
 import sys
+import os
 import subprocess
 import shutil
+import argparse
+
+BASE_DIR = os.path.dirname(os.path.realpath(__file__))
 
 options = {
     ######## USER INPUT #########
     "sectionNr": True,
-    "TOC": True,
     "TOC_depth": 2,
     "pathToBib": "lib2.bib",
     "template": "canvasTemplate.html",
+    "template_dir": BASE_DIR,
     "filters": ["highlightCode.py",
-                "addEquationNumbers.py"]
+                "addEquationNumbers.py"],
+    "filter_dir" : BASE_DIR
     #############################
 }
 
@@ -76,11 +81,19 @@ def helpMessage():
   """)
 
 
-def runPandoc(inputFile, outputFile="output.html", markdown=False):
+def runPandoc(outputFile="output.html", markdown=False):
+    parser = argparse.ArgumentParser("LatexToHtml")
+    parser.add_argument("target", type=str, help="file to parse")
+    parser.add_argument("--toc", action='store_true', help='add a TOC')
+
+    ags = parser.parse_args()
+
     global options
 
+    options["TOC"] = ags.toc
+
     #defaults
-    args = ["pandoc", "--mathml", "--standalone", "--to=html"]
+    args = ["pandoc", "--mathml", "--standalone", "--to=html", "--shift-heading-level-by=0"]
 
     # input file format
     if markdown:
@@ -99,15 +112,18 @@ def runPandoc(inputFile, outputFile="output.html", markdown=False):
     if "pathToBib" in options:
         args.append(f"--bibliography={options['pathToBib']}")
     if "template" in options:
-        args.append(f"--template={options['template']}")
+        temp = os.path.join(options["template_dir"], options["template"])
+        args.append(f"--template={temp}")
     for filter in options["filters"]:
-        args.append(f"--filter={filter}")
+        filt = os.path.join(options["filter_dir"], filter)
+        args.append(f"--filter={filt}")
 
     args.append(f"--output={outputFile}")
-    args.append(inputFile)
+    args.append(ags.target)
     # run pandocs
-    print(f"Processing: {inputFile}")
-    subprocess.Popen(args)
+    print(f"Processing: {ags.target}")
+    print(f"Command: {args}")
+    subprocess.call(args)
     print(f"HTML is written to: {outputFile}")
 
 
@@ -116,27 +132,28 @@ if __name__ == "__main__":
         print("No pandoc installation found.")
         exit()
 
-    userOptions = sys.argv
+    runPandoc()
+    #userOptions = sys.argv
 
-    if len(userOptions) == 1:
-        print("Please specify at least an input file (.tex or .md)")
-        print("General usage: textToHtml.py <input>.tex <output>.html")
-        print("For a help message use: textToHtml.py help")
+    #if len(userOptions) == 1:
+    #    print("Please specify at least an input file (.tex or .md)")
+    #    print("General usage: textToHtml.py <input>.tex <output>.html")
+    #    print("For a help message use: textToHtml.py help")
 
-    if len(userOptions) == 2:
-        if userOptions[1][-4:] == ".tex":
-            runPandoc(userOptions[1])
-        elif userOptions[1][-3:] == ".md":
-            runPandoc(userOptions[1], markdown=True)
-        elif userOptions[1].find("help") != -1:
-            print(helpMessage())
-        else:
-            print("Only .tex or .md files are supported.")
+    #if len(userOptions) == 2:
+    #    if userOptions[1][-4:] == ".tex":
+    #        runPandoc()
+    #    elif userOptions[1][-3:] == ".md":
+    #        runPandoc(markdown=True)
+    #    elif userOptions[1].find("help") != -1:
+    #        print(helpMessage())
+    #    else:
+    #        print("Only .tex or .md files are supported.")
 
-    if len(userOptions) == 3:
-        if userOptions[1][-4:] == ".tex":
-            runPandoc(userOptions[1], userOptions[2])
-        elif userOptions[1][-3:] == ".md":
-            runPandoc(userOptions[1], userOptions[2], markdown=True)
-        else:
-            print("Only .tex or .md files are supported.")
+    #if len(userOptions) == 3:
+    #    if userOptions[1][-4:] == ".tex":
+    #        runPandoc(userOptions[2])
+    #    elif userOptions[1][-3:] == ".md":
+    #        runPandoc(userOptions[2], markdown=True)
+    #    else:
+    #        print("Only .tex or .md files are supported.")
